@@ -1,37 +1,21 @@
 import streamlit as st
 from google import genai
-import io
-from PIL import Image
 
 # ၁။ API Configuration
 try:
-    # Streamlit Cloud ရဲ့ Secrets ထဲမှာ GEMINI_API_KEY ရှိရပါမယ်
     API_KEY = st.secrets["GEMINI_API_KEY"]
     client = genai.Client(api_key=API_KEY)
 except Exception as e:
-    st.error(f"API Key config Error: {e}")
+    st.error(f"API Key Error: {e}")
 
-st.set_page_config(page_title="Hacker Bot MM", page_icon="🛡️", layout="wide")
+st.set_page_config(page_title="Gemini 3 Hacker AI", page_icon="⚡")
 
-# Hacker Style Dark Theme
-st.markdown("""
-    <style>
-    .stApp { background-color: #0b0e14; color: #00ff41; }
-    .stChatInput { border: 1px solid #00ff41 !important; }
-    .stButton>button { background-color: #1a1c23; color: #00ff41; border: 1px solid #00ff41; }
-    </style>
-    """, unsafe_allow_html=True)
+# Gemini 3 အတွက် Model ID အမှန်
+# ရှေ့က models/ မပါရပါဘူး
+MODEL_ID = "gemini-3-flash-preview"
 
-# Model ID ကို အရှေ့က models/ မပါဘဲ ဒီလိုပဲ ရေးပါ
-MODEL_ID = "gemini-1.5-flash" 
-
-with st.sidebar:
-    st.title("🛡️ Hacker Setup")
-    mode = st.selectbox("Select Role", ["General Hacker", "Code Reviewer", "CTF Solver"])
-    uploaded_file = st.file_uploader("Upload Code File", type=['py', 'js', 'php', 'txt'])
-    if st.button("Clear Chat"):
-        st.session_state.messages = []
-        st.rerun()
+st.title("⚡ Gemini 3 Hacker Chatbot")
+st.caption("Next-Gen Experimental AI for Hacking & Coding")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
@@ -47,21 +31,18 @@ if prompt := st.chat_input("Hacking သို့မဟုတ် Programming အ�
 
     with st.chat_message("assistant"):
         try:
-            # File ပါလာရင် content ထဲ ထည့်ဖတ်မယ်
-            context = ""
-            if uploaded_file:
-                context = f"\n[FILE ATTACHED]:\n{uploaded_file.getvalue().decode('utf-8')}\n"
-
-            # API Call (MODEL_ID က အခု "gemini-1.5-flash" ပဲ ဖြစ်ရပါမယ်)
+            # Gemini 3 ကို System Instruction နဲ့ ခေါ်မယ်
             response = client.models.generate_content(
                 model=MODEL_ID,
-                contents=f"System: You are a {mode} answering in Myanmar. {context}\nUser: {prompt}"
+                contents=f"You are a Cybersecurity and Programming Expert. Help the user in Myanmar language: {prompt}"
             )
             
-            res_text = response.text
-            st.markdown(res_text)
-            st.session_state.messages.append({"role": "assistant", "content": res_text})
+            answer = response.text
+            st.markdown(answer)
+            st.session_state.messages.append({"role": "assistant", "content": answer})
             
         except Exception as e:
-            # Error Message ကို သေချာပြပေးမယ်
-            st.error(f"AI Error: {e}")
+            # Error တက်ရင် ဘာကြောင့်လဲဆိုတာ အတိအကျပြမယ်
+            st.error(f"Error Type: {type(e).__name__}")
+            st.error(f"Message: {e}")
+            
