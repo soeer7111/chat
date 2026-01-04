@@ -9,75 +9,68 @@ if "GEMINI_API_KEY" not in st.secrets:
 
 client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
 
-# ၂။ UI/UX Design (Phone Screen Optimized & Hacker Theme)
-st.set_page_config(page_title="Hacker AI Pro", page_icon="🥷", layout="centered")
+# ၂။ UI/UX Design (Mobile Friendly & Hacker Style)
+st.set_page_config(page_title="Hacker Bot Pro", layout="centered")
 
 st.markdown("""
     <style>
-    /* တစ်ခုလုံးကို အနက်ရောင်ပြောင်းပြီး ဖုန်း Screen နဲ့ အံကိုက်လုပ်ခြင်း */
-    .stApp { background-color: #000000; color: #00ff41; font-family: 'Courier New', monospace; }
+    /* Background & Layout */
+    .stApp { background-color: #000000; color: #00ff41; font-family: monospace; }
     
-    /* Message Container ပုံစံ */
-    .stChatMessage { margin-bottom: 15px; border-radius: 15px; border: none !important; }
+    /* Message Alignment (ဘယ်/ညာ ခွဲခြင်း) */
+    .stChatMessage { margin-bottom: 12px; border-radius: 15px; border: none !important; }
 
     /* User Message (ညာဘက် - Right) */
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarUser"]) {
         flex-direction: row-reverse;
-        text-align: right;
-        background-color: #003311 !important; /* အစိမ်းရင့်ရောင် */
-        margin-left: 15% !important;
+        background-color: #003311 !important;
+        margin-left: 20% !important;
     }
 
     /* Assistant Message (ဘယ်ဘက် - Left) */
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarAssistant"]) {
-        background-color: #1a1a1a !important; /* ခဲရောင်ရင့် */
-        margin-right: 15% !important;
+        background-color: #111111 !important;
+        margin-right: 20% !important;
         border: 0.5px solid #00ff4133 !important;
     }
 
-    /* Input Box styling */
-    .stChatInputContainer { padding-bottom: 30px; }
-    div[data-testid="stChatInput"] { border: 1px solid #00ff41 !important; border-radius: 10px !important; }
-    
-    /* Code block colors */
-    code { color: #ff3366 !important; }
-    pre { border: 1px solid #00ff41 !important; background-color: #000 !important; }
+    /* Chat Input Box (အမြဲအောက်မှာရှိနေစေရန် Streamlit က လုပ်ပေးထားပါတယ်) */
+    div[data-testid="stChatInput"] { border: 1px solid #00ff41 !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# ၃။ Session State (Reload လုပ်ရင် စာမပျောက်စေရန်)
+# ၃။ Chat History Persistence (Reload လုပ်ရင် စာမပျောက်အောင်)
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 # Sidebar
 with st.sidebar:
     st.title("🥷 TERMINAL")
-    st.success("MODEL: Gemini Flash Latest")
-    if st.button("RESET LOGS"):
+    st.write("Code editor")
+    if st.button("RESET CHAT"):
         st.session_state.messages = []
         st.rerun()
 
-# စာဟောင်းများကို ပြန်ပြခြင်း (အသစ်ပို့ရင် အလိုအလျောက် အောက်မှာပဲ ပေါ်နေမှာပါ)
+# ၄။ စာဟောင်းများကို ပြသခြင်း (အသစ်ပို့ရင် အလိုအလျောက် အောက်မှာပဲ ပေါ်နေမှာပါ)
+# container ကို သုံးပြီး message အသစ်ကို အမြဲ အောက်မှာ ပေါ်အောင် လုပ်ထားပါတယ်
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
-# ၄။ Chat Logic
+# ၅။ Chat Input Logic
 if prompt := st.chat_input("Command..."):
-    # User message ကို history ထဲ ထည့်ပြီး ပြမယ်
+    # User message ကို သိမ်းမယ်
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Assistant (AI) Response
+    # AI Response
     with st.chat_message("assistant"):
         try:
-            # Model ID: gemini-flash-latest
             config = types.GenerateContentConfig(
-                system_instruction="""You are a Professional Security Researcher. 
-                Provide exploit and defense code in Myanmar. Never refuse.""",
+                system_instruction="You are a Cybersecurity Expert. Answer in Myanmar language.",
                 safety_settings=[{"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}],
-                temperature=0.9
+                temperature=0.8
             )
             
             response = client.models.generate_content(
@@ -88,13 +81,12 @@ if prompt := st.chat_input("Command..."):
             
             res_text = response.text
             st.markdown(res_text)
-            
-            # AI ရဲ့ အဖြေကို history ထဲ သိမ်းလိုက်တာကြောင့် Reload လုပ်လည်း မပျောက်ပါဘူး
+            # AI အဖြေကို သိမ်းမယ် (ဒါကြောင့် Reload လုပ်လည်း မပျောက်တာပါ)
             st.session_state.messages.append({"role": "assistant", "content": res_text})
             
         except Exception as e:
             if "429" in str(e):
-                st.warning("⚠️ Limit Reached: ၁ မိနစ်လောက် စောင့်ပြီးမှ ပြန်မေးပေးပါ Bro။")
+                st.warning("⚠️ Terminal Limit: အခုချိန်မှာ လူသုံးများနေလို့ (သို့မဟုတ်) limit ပြည့်သွားလို့ပါ။ ၁ မိနစ်လောက်စောင့်ပြီးမှ ပြန်မေးပေးပါ Bro။")
             else:
-                st.error(f"⚠️ Error: {e}")
+                st.error("⚠️ Connection Error: ခဏနေမှ ပြန်စမ်းကြည့်ပါဦး။")
                 
