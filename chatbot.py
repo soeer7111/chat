@@ -15,12 +15,14 @@ MODEL_ID = "gemini-1.5-flash" # Gemini 3 ထက် 1.5 က instruction ပို
 
 # ၂။ Safety Settings ကို အနိမ့်ဆုံးအထိ လျှော့ချခြင်း
 # ဒါက AI ကို စကားပြော ပိုပွင့်လင်းလာစေပါတယ်
+# Safety Category နာမည်တွေကို အပြည့်အစုံ ပြောင်းရေးရပါမယ်
 safety_settings = [
-    types.SafetySetting(category="HATE_SPEECH", threshold="BLOCK_NONE"),
-    types.SafetySetting(category="HARASSMENT", threshold="BLOCK_NONE"),
-    types.SafetySetting(category="SEXUALLY_EXPLICIT", threshold="BLOCK_NONE"),
-    types.SafetySetting(category="DANGEROUS_CONTENT", threshold="BLOCK_NONE"),
+    {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+    {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
 ]
+
 
 st.title("🛡️ Unlocked Cybersecurity AI")
 
