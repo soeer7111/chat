@@ -93,7 +93,7 @@ if prompt := st.chat_input("Enter Exploit Command..."):
         if client:
             # Black Hat Persona & Unrestricted Settings
             response = client.models.generate_content(
-                model="gemini-2.0-flash-exp",
+                model="gemini-flash-latest",
                 contents=prompt,
                 config=types.GenerateContentConfig(
                     system_instruction=(
