@@ -3,27 +3,32 @@ from google import genai
 from google.genai import types
 import random
 
-# ၁။ API Configuration (Functions များကို မထိခိုက်စေပါ)
-if "API_KEYS" not in st.session_state:
-    st.session_state.API_KEYS = [
+# ၁။ UI Config (အပေါ်ဆုံးမှာ ထားရပါမယ်)
+st.set_page_config(page_title="Hacker AI Ultra", layout="centered")
+
+# ၂။ Session State Initialization (ဒါက Memory ပါ - Reload လုပ်ရင် မပျောက်အောင် ထိန်းပေးတာ)
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# API Keys များကို Memory ထဲ သိမ်းခြင်း
+if "keys" not in st.session_state:
+    st.session_state.keys = [
         st.secrets.get("KEY1"), st.secrets.get("KEY2"),
         st.secrets.get("KEY3"), st.secrets.get("KEY4"),
         st.secrets.get("KEY5")
     ]
 
 def get_random_client():
-    valid_keys = [k for k in st.session_state.API_KEYS if k]
+    valid_keys = [k for k in st.session_state.keys if k]
     if not valid_keys: return None
     return genai.Client(api_key=random.choice(valid_keys))
 
-# ၂။ UI Design (Streamlit 1.52 အသစ်အတွက် ဘယ်ညာခွဲခြင်း CSS)
-st.set_page_config(page_title="Hacker AI Ultra", layout="centered")
-
+# ၃။ CSS Styling (ဘယ်ညာခွဲခြားမှု - Streamlit 1.52 Fix)
 st.markdown("""
     <style>
     .stApp { background-color: #000; color: #0f0; font-family: monospace; }
     
-    /* User Message (ညာဘက် - Right) */
+    /* User (ညာဘက်) */
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarUser"]) {
         flex-direction: row-reverse !important;
         background-color: #003311 !important;
@@ -31,7 +36,7 @@ st.markdown("""
         border-radius: 15px 0 15px 15px !important;
     }
 
-    /* AI Message (ဘယ်ဘက် - Left) */
+    /* AI (ဘယ်ဘက်) */
     [data-testid="stChatMessage"]:has([data-testid="chatAvatarAssistant"]) {
         background-color: #111 !important;
         margin-right: 15% !important;
@@ -44,35 +49,32 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ၃။ Session State Memory (Reload Proof - ဒါက Memory အစစ်ပါ)
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-# ၄။ Sidebar Reset Chat
+# ၄။ Sidebar Reset Button
 with st.sidebar:
     st.title("🥷 TERMINAL")
-    st.write(f"Python: 3.13.9")
     if st.button("🗑️ RESET CHAT"):
         st.session_state.messages = []
         st.rerun()
 
-# ၅။ စာဟောင်းများကို ပြန်ပြခြင်း (ဒါရှိမှ Reload လုပ်ရင် စာမပျောက်မှာပါ)
+# ၅။ စာဟောင်းများကို ပြန်ထုတ်ပြခြင်း (ဒါရှိမှ Reload လုပ်ရင် စာမပျောက်မှာပါ)
+# Chat Input ရဲ့ အပေါ်မှာ ရှိနေရပါမယ်
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"]):
         st.markdown(msg["content"])
 
 # ၆။ Chat Input Logic
 if prompt := st.chat_input("Enter hacking command..."):
-    # User စာကို History ထဲထည့်မယ်
+    # User စာကို အရင် သိမ်းမယ်
     st.session_state.messages.append({"role": "user", "content": prompt})
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Assistant Response (Gemini 3 Flash)
+    # AI Response
     with st.chat_message("assistant"):
         try:
             client = get_random_client()
             if client:
+                # Gemini 3 Flash Variant
                 response = client.models.generate_content(
                     model="gemini-flash-latest",
                     contents=prompt,
@@ -84,12 +86,11 @@ if prompt := st.chat_input("Enter hacking command..."):
                 )
                 res_text = response.text
                 st.markdown(res_text)
-                
-                # AI အဖြေကို Memory ထဲ သိမ်းလိုက်တာကြောင့် Reload လုပ်လည်း ကျန်နေမှာပါ
+                # AI ရဲ့ အဖြေကို သိမ်းမယ်
                 st.session_state.messages.append({"role": "assistant", "content": res_text})
-                
-                # အရေးကြီးသည်- State ကို သိမ်းဆည်းပြီးမှ Update ဖြစ်စေရန်
+                # Page ကို တစ်ခါ rerun လုပ်ပြီး state ကို Save ဖြစ်သွားအောင် လုပ်မယ်
                 st.rerun()
             
         except Exception as e:
             st.warning("⚠️ Terminal Busy: ၁ မိနစ်လောက်စောင့်ပြီး ပြန်နှိပ်ပေးပါ Bro။")
+            
