@@ -1,4 +1,4 @@
-import streamlit as st
+def streamlit as st
 from streamlit_gsheets import GSheetsConnection
 import pandas as pd
 from google import genai
@@ -30,11 +30,19 @@ def get_ai_client():
     # Key ၅ ခုထဲမှ တစ်ခုကို random ရွေးသုံးပေးမည်
     return genai.Client(api_key=random.choice(valid_keys))
 
+# ၄။ Sheet ထဲက Data အားအားလုံးဖတ်ခြင်း
 # ၄။ Sheet ထဲက Data အားလုံးဖတ်ခြင်း
 def get_all_data():
     try:
-        return conn.read(worksheet="Sheet1", ttl=0)
-    except:
+        df = conn.read(worksheet="Sheet1", ttl=0)
+        # ခေါင်းစဉ် ၄ ခု ရှိမရှိ စစ်မယ်၊ မရှိရင် အသစ်ထည့်မယ်
+        required_cols = ["session_id", "title", "role", "content"]
+        for col in required_cols:
+            if col not in df.columns:
+                df[col] = None
+        return df
+    except Exception as e:
+        # Sheet လုံးဝအလွတ်ဖြစ်နေရင် ခေါင်းစဉ် ၄ ခုနဲ့ DataFrame အသစ်ဆောက်မယ်
         return pd.DataFrame(columns=["session_id", "title", "role", "content"])
 
 all_data = get_all_data()
