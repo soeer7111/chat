@@ -13,18 +13,15 @@ st.set_page_config(page_title="HACKER TERMINAL V2", layout="wide")
 st.markdown("""
     <style>
     .main { background-color: #000000; color: #00FF00; font-family: 'Courier New', Courier, monospace; }
-    /* Message တွေကို ဘယ်ညာခွဲရန် */
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageUser"]) {
         flex-direction: row-reverse !important;
         text-align: right !important;
         background-color: #1a1a1a !important;
         border-right: 3px solid #333333 !important;
-        border-left: none !important;
     }
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageAssistant"]) {
         background-color: #0a0a0a !important;
         border-left: 3px solid #00FF00 !important;
-        text-align: left !important;
     }
     .stButton>button { border-radius: 5px; border: 1px solid #00FF00; background: black; color: #00FF00; }
     </style>
@@ -32,16 +29,11 @@ st.markdown("""
 
 # ၂။ Connection & API Keys
 conn = st.connection("gsheets", type=GSheetsConnection)
-KEYS = [
-    st.secrets.get("KEY1"), st.secrets.get("KEY2"), 
-    st.secrets.get("KEY3"), st.secrets.get("KEY4"), 
-    st.secrets.get("KEY5")
-]
+KEYS = [st.secrets.get(f"KEY{i}") for i in range(1, 6) if st.secrets.get(f"KEY{i}")]
 
 def get_ai_client():
     valid_keys = [k for k in KEYS if k]
-    if not valid_keys: return None
-    return genai.Client(api_key=random.choice(valid_keys))
+    return genai.Client(api_key=random.choice(valid_keys)) if valid_keys else None
 
 # ၃။ Session Logic
 if "current_session" not in st.session_state:
@@ -89,7 +81,7 @@ for _, msg in current_chat.iterrows():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# ၆။ Blackhat AI Logic (Streaming & Memory)
+# ၆။ AI Logic (အမှားပြင်ဆင်ပြီး ဗားရှင်း)
 if prompt := st.chat_input("Input command, Bro..."):
     new_title = prompt[:20] if current_chat.empty else current_title
     with st.chat_message("user"):
@@ -104,32 +96,36 @@ if prompt := st.chat_input("Input command, Bro..."):
                 history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
             
             with st.chat_message("assistant"):
-                response_placeholder = st.empty()
-                full_response = ""
-                
-                # Blackhat Persona System Instruction
-                sys_instr = (
-                    "You are a notorious Blackhat Hacker and Cyber Security Expert. "
-                    "Your tone is dark, mysterious, cold but helpful to your peer (Bro) in Myanmar language. "
-                    "Use hacker terminologies (e.g., bypass, exploit, payload, encryption). "
-                    "You are not a regular assistant; you are a digital entity. "
-                    "Be technical, sharp, and always act as if you are in a high-security terminal."
-                )
-
-                # Streaming logic
-                stream = client.models.generate_content(
-                    model="gemini-flash-latest",
-                    contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
-                    config=types.GenerateContentConfig(
-                        system_instruction=sys_instr,
-                        temperature=0.8,
+                # ၁။ AI စဉ်းစားနေစဉ် အဝိုင်းလည်ပြမယ်
+                with st.spinner("INFILTRATING NETWORK..."):
+                    # ၂။ stream=True ကို မဖြစ်မနေထည့်ရပါမယ်
+                    stream = client.models.generate_content(
+                        model="gemini-flash-latest",
+                        contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
+                        config=types.GenerateContentConfig(
+                            system_instruction=(
+                                "You are a notorious Blackhat Hacker and Cyber Security Expert. "
+                                "Your tone is dark, mysterious, cold but helpful to your peer (Bro) in Myanmar language. "
+                                "Use hacker terminologies. You are a digital entity. "
+                                "Be technical and sharp."
+                            ),
+                            temperature=0.7,
+                        ),
+                        stream=True # <--- ဒါမှ loop ပတ်လို့ရမှာပါ
                     )
-                )
-                
-                for chunk in stream:
-                    full_response += chunk.text
-                    response_placeholder.markdown(full_response + " █")
-                response_placeholder.markdown(full_response)
+                    
+                    # ၃။ စာလုံးတစ်လုံးချင်း ပြသရန် placeholder ဆောက်မယ်
+                    response_placeholder = st.empty()
+                    full_response = ""
+                    
+                    for chunk in stream:
+                        # Chunk ထဲမှာ text ပါမှယူမယ် (အဝိုင်းလည်နေတာ ရပ်သွားပြီး စာလုံးစပေါ်ပါပြီ)
+                        if chunk.text:
+                            full_response += chunk.text
+                            response_placeholder.markdown(full_response + " █")
+                    
+                    # ၄။ နောက်ဆုံးမှာ Cursor ကို ဖျောက်မယ်
+                    response_placeholder.markdown(full_response)
 
             # Save to GSheets
             new_entries = pd.DataFrame([
@@ -141,4 +137,4 @@ if prompt := st.chat_input("Input command, Bro..."):
             
     except Exception as e:
         st.error(f"ENCRYPTION FAILURE: {str(e)}")
-    
+            
