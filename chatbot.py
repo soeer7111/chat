@@ -29,11 +29,16 @@ st.markdown("""
 
 # ၂။ Connection & API Keys
 conn = st.connection("gsheets", type=GSheetsConnection)
-KEYS = [st.secrets.get(f"KEY{i}") for i in range(1, 6) if st.secrets.get(f"KEY{i}")]
+KEYS = [
+    st.secrets.get("KEY1"), st.secrets.get("KEY2"), 
+    st.secrets.get("KEY3"), st.secrets.get("KEY4"), 
+    st.secrets.get("KEY5")
+]
 
 def get_ai_client():
     valid_keys = [k for k in KEYS if k]
-    return genai.Client(api_key=random.choice(valid_keys)) if valid_keys else None
+    if not valid_keys: return None
+    return genai.Client(api_key=random.choice(valid_keys))
 
 # ၃။ Session Logic
 if "current_session" not in st.session_state:
