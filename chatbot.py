@@ -100,12 +100,12 @@ if prompt := st.chat_input("Input command, Bro..."):
                 role_label = "user" if row["role"] == "user" else "model"
                 history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
             
-            with st.chat_message("assistant"):
+                        with st.chat_message("assistant"):
                 # ၁။ AI စဉ်းစားနေစဉ် အဝိုင်းလည်ပြမယ်
                 with st.spinner("INFILTRATING NETWORK..."):
-                    # ၂။ stream=True ကို မဖြစ်မနေထည့်ရပါမယ်
-                    stream = client.models.generate_content(
-                        model="gemini-flash-latest",
+                    # အမှားပြင်ဆင်ချက်- generate_content နေရာတွင် generate_content_stream ကို သုံးပါ
+                    stream = client.models.generate_content_stream(
+                        model="gemini-1.5-flash",
                         contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
                         config=types.GenerateContentConfig(
                             system_instruction=(
@@ -115,19 +115,20 @@ if prompt := st.chat_input("Input command, Bro..."):
                                 "Be technical and sharp."
                             ),
                             temperature=0.7,
-                        ),
-                        stream=True # <--- ဒါမှ loop ပတ်လို့ရမှာပါ
+                        )
                     )
                     
-                    # ၃။ စာလုံးတစ်လုံးချင်း ပြသရန် placeholder ဆောက်မယ်
                     response_placeholder = st.empty()
                     full_response = ""
                     
+                    # stream function ဖြစ်တဲ့အတွက် chunk တွေကို loop ပတ်လို့ရပါပြီ
                     for chunk in stream:
-                        # Chunk ထဲမှာ text ပါမှယူမယ် (အဝိုင်းလည်နေတာ ရပ်သွားပြီး စာလုံးစပေါ်ပါပြီ)
                         if chunk.text:
                             full_response += chunk.text
                             response_placeholder.markdown(full_response + " █")
+                    
+                    response_placeholder.markdown(full_response)
+                    
                     
                     # ၄။ နောက်ဆုံးမှာ Cursor ကို ဖျောက်မယ်
                     response_placeholder.markdown(full_response)
