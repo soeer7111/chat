@@ -100,7 +100,7 @@ if prompt := st.chat_input("Input command, Bro..."):
                 role_label = "user" if row["role"] == "user" else "model"
                 history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
             
-                        with st.chat_message("assistant"):
+                with st.chat_message("assistant"):
                 # ၁။ AI စဉ်းစားနေစဉ် အဝိုင်းလည်ပြမယ်
                 with st.spinner("INFILTRATING NETWORK..."):
                     # အမှားပြင်ဆင်ချက်- generate_content နေရာတွင် generate_content_stream ကို သုံးပါ
