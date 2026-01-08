@@ -18,6 +18,7 @@ st.markdown("""
         text-align: right !important;
         background-color: #1a1a1a !important;
         border-right: 3px solid #333333 !important;
+        border-left: none !important;
     }
     [data-testid="stChatMessage"]:has([data-testid="stChatMessageAssistant"]) {
         background-color: #0a0a0a !important;
@@ -86,7 +87,7 @@ for _, msg in current_chat.iterrows():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# ၆။ AI Logic (အမှားပြင်ဆင်ပြီး ဗားရှင်း)
+# ၆။ AI Logic
 if prompt := st.chat_input("Input command, Bro..."):
     new_title = prompt[:20] if current_chat.empty else current_title
     with st.chat_message("user"):
@@ -95,17 +96,17 @@ if prompt := st.chat_input("Input command, Bro..."):
     try:
         client = get_ai_client()
         if client:
+            # History ကို loop ပတ်ပြီး context ထည့်မယ်
             history_context = []
             for _, row in current_chat.iterrows():
                 role_label = "user" if row["role"] == "user" else "model"
                 history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
             
-                with st.chat_message("assistant"):
-                # ၁။ AI စဉ်းစားနေစဉ် အဝိုင်းလည်ပြမယ်
+            with st.chat_message("assistant"):
+                # Spinner နဲ့ အဝိုင်းအရင်လည်မယ်
                 with st.spinner("INFILTRATING NETWORK..."):
-                    # အမှားပြင်ဆင်ချက်- generate_content နေရာတွင် generate_content_stream ကို သုံးပါ
                     stream = client.models.generate_content_stream(
-                        model="gemini-1.5-flash",
+                        model="gemini-flash-latest",
                         contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
                         config=types.GenerateContentConfig(
                             system_instruction=(
@@ -121,16 +122,13 @@ if prompt := st.chat_input("Input command, Bro..."):
                     response_placeholder = st.empty()
                     full_response = ""
                     
-                    # stream function ဖြစ်တဲ့အတွက် chunk တွေကို loop ပတ်လို့ရပါပြီ
+                    # စာသား စထွက်တာနဲ့ အဝိုင်းလည်တာ ရပ်ပြီး စာလုံးတွေ ပေါ်လာပါမယ်
                     for chunk in stream:
                         if chunk.text:
                             full_response += chunk.text
                             response_placeholder.markdown(full_response + " █")
                     
-                    response_placeholder.markdown(full_response)
-                    
-                    
-                    # ၄။ နောက်ဆုံးမှာ Cursor ကို ဖျောက်မယ်
+                    # Final response (Cursor ဖျောက်မယ်)
                     response_placeholder.markdown(full_response)
 
             # Save to GSheets
@@ -143,4 +141,4 @@ if prompt := st.chat_input("Input command, Bro..."):
             
     except Exception as e:
         st.error(f"ENCRYPTION FAILURE: {str(e)}")
-            
+        
