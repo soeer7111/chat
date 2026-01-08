@@ -31,7 +31,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# ၂။ Connection & API Keys (မပြင်ထားပါ)
+# ၂။ Connection & API Keys
 conn = st.connection("gsheets", type=GSheetsConnection)
 KEYS = [
     st.secrets.get("KEY1"), st.secrets.get("KEY2"), 
@@ -50,7 +50,9 @@ if "current_session" not in st.session_state:
 
 def get_all_data():
     try:
+        # Sheet1 မှ data ကိုဖတ်မယ်
         df = conn.read(worksheet="Sheet1", ttl=0)
+        # Header တွေ ရှိမရှိ စစ်ဆေးမယ်
         for col in ["session_id", "title", "role", "content"]:
             if col not in df.columns: df[col] = None
         return df
@@ -69,24 +71,24 @@ with st.sidebar:
     st.divider()
     
     if not all_data.empty:
-        session_list = all_data[['session_id', 'title']].drop_duplicates('session_id', keep='first')
+        # History ပြန်ပြတဲ့အခါ session_id တစ်ခုချင်းစီရဲ့ ပထမဆုံး row ကို ယူတယ်
+        session_list = all_data.dropna(subset=['session_id']).drop_duplicates('session_id', keep='first')
         for _, row in session_list.iloc[::-1].iterrows():
             col1, col2 = st.columns([4, 1])
             with col1:
-                if st.button(f"📁 {row['title']}", key=row['session_id'], use_container_width=True):
+                if st.button(f"📁 {row['title']}", key=f"session_{row['session_id']}", use_container_width=True):
                     st.session_state.current_session = row['session_id']
                     st.rerun()
             with col2:
-                # Delete Button (Hold effect simulation using context menu or simple confirm)
                 if st.button("🗑️", key=f"del_{row['session_id']}"):
-                    # ၂ စက္ကန့် စောင့်ခိုင်းတာထက် ပိုမြန်အောင် Confirmation လုပ်ပေးထားပါတယ်
                     with st.spinner("Deleting..."):
-                        time.sleep(1) # Simulation delay
+                        # လက်ရှိ session_id မဟုတ်တဲ့ data တွေကိုပဲ ပြန်သိမ်းမယ်
                         all_data = all_data[all_data["session_id"] != row['session_id']]
                         conn.update(worksheet="Sheet1", data=all_data)
                         st.rerun()
 
 # ၅။ Main Display
+# လက်ရှိ Session နဲ့ သက်ဆိုင်တဲ့ Chat တွေကိုပဲ ဆွဲထုတ်မယ်
 current_chat = all_data[all_data["session_id"] == st.session_state.current_session]
 current_title = current_chat['title'].iloc[0] if not current_chat.empty else "New Sequence"
 
@@ -97,30 +99,34 @@ for _, msg in current_chat.iterrows():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# ၆။ AI Logic with Spinner
+# ၆။ AI Logic (History Memory ဖြည့်စွက်ထားသည်)
 if prompt := st.chat_input("Ask anything, Bro..."):
     if current_chat.empty:
         new_title = prompt[:20] + "..." if len(prompt) > 20 else prompt
     else:
         new_title = current_title
 
-    user_entry = pd.DataFrame([{
-        "session_id": st.session_state.current_session,
-        "title": new_title, "role": "user", "content": prompt
-    }])
-    
+    # User မေးခွန်းကို UI မှာ အရင်ပြမယ်
     with st.chat_message("user"):
         st.markdown(prompt)
 
     try:
         client = get_ai_client()
         if client:
-            # Spinner (အဝိုင်းလည်နေမည့်ပုံစံ)
+            # Memory အတွက် အရင်ပြောထားတဲ့ context တွေကို list လုပ်မယ်
+            history_context = []
+            for _, row in current_chat.iterrows():
+                # role ကို AI ခေါ်တဲ့ format (user/model) ပြောင်းပေးဖို့ လိုနိုင်ပေမယ့် 
+                # ဒီနေရာမှာ gemini logic အတိုင်း history ပို့ပေးမယ်
+                role_label = "user" if row["role"] == "user" else "model"
+                history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
+            
             with st.chat_message("assistant"):
                 with st.spinner("Thinking..."):
+                    # History နဲ့ လက်ရှိ prompt ကို ပေါင်းပြီး AI ဆီ ပို့မယ်
                     response = client.models.generate_content(
                         model="gemini-flash-latest",
-                        contents=prompt,
+                        contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
                         config=types.GenerateContentConfig(
                             system_instruction=(
                                 "You are Gemini, a helpful and smart Cyber Security Expert. "
@@ -128,21 +134,27 @@ if prompt := st.chat_input("Ask anything, Bro..."):
                                 "Provide clear, technical, and actionable advice. "
                                 "Be empathetic and insightful like a mentor."
                             ),
-                            temperature=0.9,
+                            temperature=0.7,
                         )
                     )
                     ai_res = response.text
                     st.markdown(ai_res)
             
+            # ဒေတာအသစ်တွေကို သိမ်းဆည်းရန် DataFrame ပြင်ဆင်ခြင်း
+            user_entry = pd.DataFrame([{
+                "session_id": st.session_state.current_session,
+                "title": new_title, "role": "user", "content": prompt
+            }])
             ai_entry = pd.DataFrame([{
                 "session_id": st.session_state.current_session,
                 "title": new_title, "role": "assistant", "content": ai_res
             }])
             
+            # GSheets သို့ Update လုပ်ခြင်း
             final_df = pd.concat([all_data, user_entry, ai_entry], ignore_index=True)
             conn.update(worksheet="Sheet1", data=final_df)
             st.rerun()
             
     except Exception as e:
         st.error(f"SYSTEM FAILURE: {str(e)}")
-                                
+                
