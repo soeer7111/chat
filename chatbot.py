@@ -58,7 +58,6 @@ if "current_session" not in st.session_state:
 def get_all_data():
     try:
         df = conn.read(worksheet="Sheet1", ttl=0)
-        # ဇယားကွက်အသစ်ဖြစ်နေရင် column တွေ ကြိုဆောက်ထားမယ်
         for col in ["session_id", "title", "role", "content"]:
             if col not in df.columns: df[col] = None
         return df
@@ -69,14 +68,13 @@ all_data = get_all_data()
 
 # ၄။ Sidebar (Command Center)
 with st.sidebar:
-    st.markdown("<h1 style='color:#00FF00; font-size: 20px;'>💀 DECRYPTING ACCESS...</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='color:#00FF00; font-size: 20px;'>📡 MASTER COMMANDER...</h1>", unsafe_allow_html=True)
     if st.button("INITIALIZE NEW BREACH", use_container_width=True):
         st.session_state.current_session = str(uuid.uuid4())[:8]
         st.rerun()
     st.divider()
     
     if not all_data.empty:
-        # Session တစ်ခုချင်းစီရဲ့ Title ကိုပြဖို့
         history = all_data.dropna(subset=['session_id']).drop_duplicates('session_id', keep='first')
         for _, row in history.iloc[::-1].iterrows():
             col1, col2 = st.columns([5, 1])
@@ -103,44 +101,57 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 st.markdown(f"#### `> EXECUTING: {current_title}`")
 
-# Message ပြသခြင်း
+# Message Display
 for _, msg in current_chat.iterrows():
     if pd.notna(msg["role"]) and pd.notna(msg["content"]):
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# ၆။ Hacker AI Logic (Friendly Master Version)
+# ၆။ Hacker AI Logic
 if prompt := st.chat_input("Input command, Bro..."):
-    # ... (ကျန်တဲ့ code တွေက အတူတူပဲ)
+    new_title = prompt[:20] if current_chat.empty else current_title
     
+    with st.chat_message("user"):
+        st.markdown(f"`root@vps:~$` {prompt}")
+
+    try:
+        client = get_ai_client()
+        if client:
+            history_context = []
+            for _, row in current_chat.iterrows():
+                role_label = "user" if row["role"] == "user" else "model"
+                history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
+            
+            with st.chat_message("assistant"):
+                response_placeholder = st.empty()
+                full_response = ""
+                
+                with st.spinner("⏳ ACCESSING KNOWLEDGE BASE..."):
                     stream = client.models.generate_content_stream(
                         model="gemini-flash-latest",
                         contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
                         config=types.GenerateContentConfig(
                             system_instruction=(
-                                "Role: Master Hacker & Tech Educator (Friendly Bro style). "
-                                "Identity: You are a legendary hacker who loves teaching. You treat the user as your close 'Bro'. "
-                                "Tone: Friendly, cool, supportive, and very detailed. "
-                                "Language: Myanmar (Burmese) mixed with technical terms. Speak like a senior dev/hacker talking to a junior bro. "
-                                "Rules: When Bro asks about hacking, explain the logic, the steps, and the security behind it in great detail. "
-                                "Never be cold or mysterious. Be a mentor. "
-                                "Always start with [ACCESS_GRANTED: BRO] or [SYSTEM_ONLINE] to keep the vibe."
+                                "Role: Master Hacker & Cyber Security Mentor. "
+                                "Identity: You are a friendly, expert hacker who loves sharing technical knowledge. You treat the user as a close brother (Bro). "
+                                "Tone: Cool, supportive, and extremely detailed in technical explanations. "
+                                "Language: Myanmar (Burmese) mixed with hacker slang (SQLi, XSS, OSINT, Metasploit, etc.). "
+                                "Rules: When Bro asks about hacking or tech, explain it step-by-step in great detail in Myanmar. "
+                                "Be helpful and never mysterious or cold. "
+                                "Always start with [SYSTEM_ONLINE] or [ACCESS_GRANTED: BRO] to keep the terminal vibe."
                             ),
                             temperature=0.7,
                         )
                     )
-# ... (ကျန်တဲ့ code တွေ ဆက်ရေးပါ)
-
                     
                     for chunk in stream:
                         if chunk.text:
                             full_response += chunk.text
-                            # Terminal Typewriter effect
                             response_placeholder.markdown(f"{full_response}<span class='cursor'></span>", unsafe_allow_html=True)
                     
                     response_placeholder.markdown(full_response)
 
-            # Database သို့ သိမ်းဆည်းခြင်း
+            # Save to Database
             new_entries = pd.DataFrame([
                 {"session_id": st.session_state.current_session, "title": new_title, "role": "user", "content": prompt},
                 {"session_id": st.session_state.current_session, "title": new_title, "role": "assistant", "content": full_response}
@@ -150,4 +161,4 @@ if prompt := st.chat_input("Input command, Bro..."):
             
     except Exception as e:
         st.error(f"FATAL ERROR: KERNEL PANIC - {str(e)}")
-                    
+                        
