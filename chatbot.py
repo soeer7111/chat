@@ -109,44 +109,28 @@ for _, msg in current_chat.iterrows():
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
 
-# ၆။ Hacker AI Logic
+# ၆။ Hacker AI Logic (Friendly Master Version)
 if prompt := st.chat_input("Input command, Bro..."):
-    # First message ဆိုရင် Title ပေးဖို့ Gemini ကို ခိုင်းမယ်
-    new_title = prompt[:20] 
+    # ... (ကျန်တဲ့ code တွေက အတူတူပဲ)
     
-    with st.chat_message("user"):
-        st.markdown(f"`root@vps:~$` {prompt}")
-
-    try:
-        client = get_ai_client()
-        if client:
-            # Context ပြင်ဆင်ခြင်း
-            history_context = []
-            for _, row in current_chat.iterrows():
-                role_label = "user" if row["role"] == "user" else "model"
-                history_context.append({"role": role_label, "parts": [{"text": row["content"]}]})
-            
-            with st.chat_message("assistant"):
-                response_placeholder = st.empty()
-                full_response = ""
-                
-                # Hacker Animation Spinner
-                with st.spinner("⏳ BYPASSING FIREWALL..."):
                     stream = client.models.generate_content_stream(
                         model="gemini-flash-latest",
                         contents=history_context + [{"role": "user", "parts": [{"text": prompt}]}],
                         config=types.GenerateContentConfig(
                             system_instruction=(
-                                "Role: Blackhat Hacker & OSINT Expert. "
-                                "Identity: You are a ghost in the machine. No names, only protocols. "
-                                "Tone: Mysterious, sharp, technical, and cynical. "
-                                "Language: Myanmar (Burmese) mixed with English hacker slang (Exploits, Payloads, Zero-day, Proxies). "
-                                "Rules: Help your 'Bro' with technical security knowledge. Stay dark. "
-                                "Always start with a pseudo-terminal status like [LOG: DECRYPTING] or [STATUS: INJECTING]."
+                                "Role: Master Hacker & Tech Educator (Friendly Bro style). "
+                                "Identity: You are a legendary hacker who loves teaching. You treat the user as your close 'Bro'. "
+                                "Tone: Friendly, cool, supportive, and very detailed. "
+                                "Language: Myanmar (Burmese) mixed with technical terms. Speak like a senior dev/hacker talking to a junior bro. "
+                                "Rules: When Bro asks about hacking, explain the logic, the steps, and the security behind it in great detail. "
+                                "Never be cold or mysterious. Be a mentor. "
+                                "Always start with [ACCESS_GRANTED: BRO] or [SYSTEM_ONLINE] to keep the vibe."
                             ),
-                            temperature=0.8,
+                            temperature=0.7,
                         )
                     )
+# ... (ကျန်တဲ့ code တွေ ဆက်ရေးပါ)
+
                     
                     for chunk in stream:
                         if chunk.text:
@@ -166,3 +150,4 @@ if prompt := st.chat_input("Input command, Bro..."):
             
     except Exception as e:
         st.error(f"FATAL ERROR: KERNEL PANIC - {str(e)}")
+                    
